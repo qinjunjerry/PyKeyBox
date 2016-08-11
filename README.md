@@ -1,8 +1,9 @@
 # PyKeyBox
-A mini key/password manager written in python using the AES encryption algorithm.
+A mini key/password manager written in python using the AES encryption 
+algorithm from PyCrypto -- The Python Cryptography Toolkit.
 
 ## It is mini
-Only one python file with size less than 10k bytes, and less than 200 
+Only one python file with size less than 10k bytes, and less than 200
 lines of code, excluding empty lines and comments.
 
 ## simple
@@ -18,7 +19,9 @@ keybox export [file]: export all key names and contents to stdout or a file
 ```
 
 ## portable
-Just take the python file and the db file with you anywhere you want.
+Just take the python script file and the sqlite database file with you 
+anywhere you want.
 
 ## yes secure enough
 It is based on the well known AES encryption algorithm.
+

@@ -16,6 +16,11 @@ class KeyBox(object):
 
     def __init__(self, file):
         self.conn = sqlite3.connect(file)
+        # Use 8-bit string instead of unicode string, in order to read/write international
+        # characters like Chinese
+        self.conn.text_factory = str
+        # The following line would use unicode string
+        # self.conn.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
         self.cursor = self.conn.cursor()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS keys (name TEXT PRIMARY KEY, content BLOB)')
         self.conn.commit()
@@ -84,9 +89,9 @@ def inputContent(name):
     lines = []
     while True:
         line = raw_input()
-        if line: 
+        if line:
             lines.append(line)
-        else: 
+        else:
             break
     return '\n'.join(lines)
 
@@ -189,7 +194,7 @@ def main():
         if len(names) == 0:
             sys.stdout.write("No item found\n")
         else:
-            for name in names: 
+            for name in names:
                 print "- " + name
         sys.exit(0)
 
@@ -241,9 +246,9 @@ def main():
         for name in keybox.list():
             fd.write("%s:\n" % name)
             fd.write("%s" % keybox.view(name) )
-            if fd == sys.stdout: 
+            if fd == sys.stdout:
                 fd.write("---\n")
-            else: 
+            else:
                 fd.write("\n")
         if fd != sys.stdout:
             sys.stdout.write("Exported to file %s\n" % args.file)

@@ -16,8 +16,8 @@ class KeyBox(object):
     TABLE_NAME = "keybox"
     MASTER_KEY_TITLE = "<MASTER>"
 
-    def __init__(self, file):
-        self.conn = sqlite3.connect(file)
+    def __init__(self, aFile):
+        self.conn = sqlite3.connect(aFile)
         # Use 8-bit string instead of unicode string, in order to read/write 
         # international characters like Chinese
         self.conn.text_factory = str
@@ -175,13 +175,28 @@ def exitWithError(errMsg, errCode=-1):
     sys.stderr.write(errMsg + "\n")
     sys.exit(errCode)
 
+def getDefaultDBFile():
+    keyboxFile = "%s/.keybox" % os.environ['HOME']
+    if not os.path.exists(keyboxFile):
+        return "%s/keybox.sdb" % os.environ['HOME']
+
+    with open(keyboxFile, 'r') as fd:
+        for line in fd:
+            return line
+
+def setDefaultDBFile(aFile):
+    keyboxFile = "%s/.keybox" % os.environ['HOME']
+    with open(keyboxFile, 'w') as fd:
+        fd.write( os.path.abspath(aFile) )
+
 def main():
 
     # parse command line arguments
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-d', '--database', default='%s/keybox.sdb' % os.environ["HOME"],
-                        help='the sqlite database file to store keys. Default: %s/keybox.sdb' 
-                        % os.environ["HOME"] )
+    parser.add_argument('-d', '--database', 
+                    help='the sqlite database file to store keys. ' + 
+                    'Default: the previously used database file, or %s/keybox.sdb' 
+                    % os.environ["HOME"] )
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
             metavar='help|list|view|add|mod|del|import|export')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")
@@ -209,6 +224,10 @@ def main():
          parser.print_help()
          sys.exit(0)
 
+    if args.database == None:
+        args.database = getDefaultDBFile()
+    else:
+        setDefaultDBFile(args.database)
     keybox = KeyBox(args.database)
     if args.action == 'list':
         titles = keybox.list()

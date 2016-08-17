@@ -23,19 +23,19 @@ class KeyBox(object):
         # The following line would use unicode string
         # self.conn.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
         self.cursor = self.conn.cursor()
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS keys (title TEXT PRIMARY KEY, content BLOB)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS keybox (title TEXT PRIMARY KEY, content BLOB)')
         self.conn.commit()
 
     def list(self):
         titles = []
-        self.cursor.execute('SELECT title FROM keys ORDER BY title')
+        self.cursor.execute('SELECT title FROM keybox ORDER BY title')
         for row in self.cursor:
             if row[0] != KeyBox.MASTER_KEY_TITLE:
                 titles.append( row[0] )
         return titles
 
     def exists(self, title):
-        self.cursor.execute("SELECT content FROM keys WHERE title=?", (title,) )
+        self.cursor.execute("SELECT content FROM keybox WHERE title=?", (title,) )
         return self.cursor.fetchone() != None
 
     def assertExist(self, title):
@@ -50,13 +50,13 @@ class KeyBox(object):
                 self.aesKey = hashlib.sha256(password).digest()
                 # the hash of the AES key, stored in db for master password verification
                 keyHash = hashlib.sha256(self.aesKey).hexdigest()
-                self.cursor.execute("INSERT INTO keys VALUES (?,?)", (KeyBox.MASTER_KEY_TITLE, keyHash ) )
+                self.cursor.execute("INSERT INTO keybox VALUES (?,?)", (KeyBox.MASTER_KEY_TITLE, keyHash ) )
                 self.conn.commit()
             else:
                 exitWithError("Error: password not match, please retry")
         else:
             # get the stored key hash
-            self.cursor.execute("SELECT content FROM keys WHERE title=?", (KeyBox.MASTER_KEY_TITLE,) )
+            self.cursor.execute("SELECT content FROM keybox WHERE title=?", (KeyBox.MASTER_KEY_TITLE,) )
             storedKeyHash = self.cursor.fetchone()[0]
             # input master password
             password = inputPassword("Master password: ")
@@ -66,7 +66,7 @@ class KeyBox(object):
                 exitWithError("Error: incorrect master password, please retry")
 
     def view(self, title):
-        self.cursor.execute("SELECT content FROM keys WHERE title=?", (title,) )
+        self.cursor.execute("SELECT content FROM keybox WHERE title=?", (title,) )
         encrypted = self.cursor.fetchone()[0]
         return decrypt(encrypted, self.aesKey)
 
@@ -74,13 +74,13 @@ class KeyBox(object):
         # for better print effect
         if plain[-1] != "\n": plain += "\n"
         encrypted = encrypt(plain, self.aesKey)
-        self.cursor.execute("INSERT OR REPLACE INTO keys VALUES (?,?)",
+        self.cursor.execute("INSERT OR REPLACE INTO keybox VALUES (?,?)",
                             (title, sqlite3.Binary(encrypted) ) )
         self.conn.commit()
 
     def delete(self, title):
         plain = self.view(title)
-        self.cursor.execute("delete FROM keys WHERE title=?", (title,) )
+        self.cursor.execute("delete FROM keybox WHERE title=?", (title,) )
         self.conn.commit()
         return plain
 

@@ -169,7 +169,7 @@ def main():
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
             metavar='help|list|view|add|mod|del|import|export')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")
-    subParser = subparsers.add_parser("list", help="list all key titles")
+    subParser = subparsers.add_parser("list", help="list all key titles (this is default)")
     subParser = subparsers.add_parser("view", help="view the content for the given key title")
     subParser.add_argument("title", help="a key title")
     subParser = subparsers.add_parser("add", help="add a new key title and content")
@@ -182,6 +182,10 @@ def main():
     subParser.add_argument("file", help="a text file containing key titles and contents to import")
     subParser = subparsers.add_parser("export", help="export all key titles and contents to stdout or a file")
     subParser.add_argument("file", nargs='?', help="a text file to export the key titles and contents")
+    
+    # 'list' if not subcommand is given
+    if len(sys.argv) == 1: sys.argv.append('list')
+    
     args = parser.parse_args()
 
     if args.action == 'help':

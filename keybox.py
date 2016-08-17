@@ -2,6 +2,7 @@
 
 """A mini key/password manager written in python using the AES encryption algorithm."""
 
+import os
 import sys
 import os.path
 import random
@@ -164,8 +165,9 @@ def main():
 
     # parse command line arguments
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-d', '--database', default='keybox.sdb',
-                        help='the sqlite database file to store keys')
+    parser.add_argument('-d', '--database', default='%s/keybox.sdb' % os.environ["HOME"],
+                        help='the sqlite database file to store keys. Default: %s/keybox.sdb' 
+                        % os.environ["HOME"] )
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
             metavar='help|list|view|add|mod|del|import|export')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")

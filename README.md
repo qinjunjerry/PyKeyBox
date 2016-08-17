@@ -13,7 +13,7 @@ them with key titles you gave to provide you maximum
 
 
 ## It is mini
-Only one python file with size less than 10k bytes, and less than 200
+Only one python file with size less than 10k bytes, and less than 250
 lines of code, excluding empty lines and comments.
 
 
@@ -27,6 +27,7 @@ keybox mod    <title>: modify the content for the given key title
 keybox del    <title>: delete an existing key title and content
 keybox import <file> : import all key titles and contents from a text file
 keybox export [file] : export all key titles and contents to stdout or a file
+keybox reset         : reset the master password
 ```
 
 

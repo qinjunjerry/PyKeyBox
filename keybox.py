@@ -13,77 +13,91 @@ import argparse
 import Crypto.Cipher.AES
 
 class KeyBox(object):
+    TABLE_NAME = "keybox"
     MASTER_KEY_TITLE = "<MASTER>"
 
     def __init__(self, file):
         self.conn = sqlite3.connect(file)
-        # Use 8-bit string instead of unicode string, in order to read/write international
-        # characters like Chinese
+        # Use 8-bit string instead of unicode string, in order to read/write 
+        # international characters like Chinese
         self.conn.text_factory = str
         # The following line would use unicode string
         # self.conn.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
         self.cursor = self.conn.cursor()
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS keybox (title TEXT PRIMARY KEY, content BLOB)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS %s (title TEXT PRIMARY KEY, content BLOB)' % KeyBox.TABLE_NAME)
         self.conn.commit()
 
     def list(self):
         titles = []
-        self.cursor.execute('SELECT title FROM keybox ORDER BY title')
+        self.cursor.execute('SELECT title FROM %s ORDER BY title' % KeyBox.TABLE_NAME)
         for row in self.cursor:
             if row[0] != KeyBox.MASTER_KEY_TITLE:
                 titles.append( row[0] )
         return titles
 
     def exists(self, title):
-        self.cursor.execute("SELECT content FROM keybox WHERE title=?", (title,) )
+        self.cursor.execute("SELECT content FROM %s WHERE title=?" % KeyBox.TABLE_NAME, (title,) )
         return self.cursor.fetchone() != None
 
-    def assertExist(self, title):
-        if not self.exists(title):
-            exitWithError("Error: '%s' not found, try to list all titles or change to another title" % title)
-
-    def initOrVerifyMasterPassword(self):
-        if not self.exists(KeyBox.MASTER_KEY_TITLE):
-            password = inputPassword("Create a new master password: ")
-            if password == inputPassword("Confirm the master password: "):
-                # the AES key of the master password, to encrypt key content
-                self.aesKey = hashlib.sha256(password).digest()
-                # the hash of the AES key, stored in db for master password verification
-                keyHash = hashlib.sha256(self.aesKey).hexdigest()
-                self.cursor.execute("INSERT INTO keybox VALUES (?,?)", (KeyBox.MASTER_KEY_TITLE, keyHash ) )
-                self.conn.commit()
-            else:
-                exitWithError("Error: password not match, please retry")
-        else:
-            # get the stored key hash
-            self.cursor.execute("SELECT content FROM keybox WHERE title=?", (KeyBox.MASTER_KEY_TITLE,) )
-            storedKeyHash = self.cursor.fetchone()[0]
-            # input master password
-            password = inputPassword("Master password: ")
+    def initMasterPassword(self, table=TABLE_NAME):
+        password = inputPassword("Create a new master password: ")
+        if password == inputPassword("Confirm the master password: "):
+            # the AES key of the master password, to encrypt key content
             self.aesKey = hashlib.sha256(password).digest()
-            # compare key hash
-            if hashlib.sha256(self.aesKey).hexdigest() != storedKeyHash:
-                exitWithError("Error: incorrect master password, please retry")
+            # the hash of the AES key, stored in db for master password verification
+            keyHash = hashlib.sha256(self.aesKey).hexdigest()
+            self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?)" % table, 
+                    (KeyBox.MASTER_KEY_TITLE, keyHash ) )
+            self.conn.commit()
+        else:
+            exitWithError("Error: password not match, please retry")
+            
+    def verifyMasterPassword(self):
+        # get the stored key hash
+        self.cursor.execute("SELECT content FROM %s WHERE title=?" 
+                % KeyBox.TABLE_NAME, (KeyBox.MASTER_KEY_TITLE,) )
+        storedKeyHash = self.cursor.fetchone()[0]
+        # input master password
+        password = inputPassword("Master password: ")
+        self.aesKey = hashlib.sha256(password).digest()
+        # compare key hash
+        if hashlib.sha256(self.aesKey).hexdigest() != storedKeyHash:
+            exitWithError("Error: incorrect master password, please retry")
 
     def view(self, title):
-        self.cursor.execute("SELECT content FROM keybox WHERE title=?", (title,) )
+        self.cursor.execute("SELECT content FROM %s WHERE title=?" 
+                % KeyBox.TABLE_NAME, (title,) )
         encrypted = self.cursor.fetchone()[0]
         return decrypt(encrypted, self.aesKey)
 
-    def set(self, title, plain):
+    def set(self, title, plain, table=TABLE_NAME):
         # for better print effect
         if plain[-1] != "\n": plain += "\n"
         encrypted = encrypt(plain, self.aesKey)
-        self.cursor.execute("INSERT OR REPLACE INTO keybox VALUES (?,?)",
+        self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?)" % table,
                             (title, sqlite3.Binary(encrypted) ) )
         self.conn.commit()
 
     def delete(self, title):
         plain = self.view(title)
-        self.cursor.execute("delete FROM keybox WHERE title=?", (title,) )
+        self.cursor.execute("DELETE FROM %s WHERE title=?" % KeyBox.TABLE_NAME, (title,) )
         self.conn.commit()
         return plain
 
+    def reset(self):
+        tmpTable = "_tmp_"
+        self.cursor.execute('DROP TABLE IF EXISTS %s' % tmpTable)
+        self.cursor.execute('CREATE TABLE %s (title TEXT PRIMARY KEY, content BLOB)' % tmpTable)
+        keys = []
+        for title in self.list():
+            content = self.view(title)
+            keys.append( (title, content) )
+        self.initMasterPassword(table=tmpTable)
+        for title, content in keys:
+            self.set(title, content, table=tmpTable)
+        self.cursor.execute("DROP TABLE %s" % KeyBox.TABLE_NAME )
+        self.cursor.execute("ALTER TABLE %s RENAME TO %s" % (tmpTable, KeyBox.TABLE_NAME) )
+        self.conn.commit()
 
 def inputContent(title):
     sys.stdout.write("Input content of '%s', enter an empty line to finish:\n" % title)
@@ -184,6 +198,7 @@ def main():
     subParser.add_argument("file", help="a text file containing key titles and contents to import")
     subParser = subparsers.add_parser("export", help="export all key titles and contents to stdout or a file")
     subParser.add_argument("file", nargs='?', help="a text file to export the key titles and contents")
+    subParser = subparsers.add_parser("reset", help="reset the master password")
     
     # 'list' if not subcommand is given
     if len(sys.argv) == 1: sys.argv.append('list')
@@ -209,7 +224,8 @@ def main():
         if keybox.exists(args.title):
             exitWithError("Error: '%s' exists, try to view it or add with another title" % args.title)
     if args.action in ['view', 'mod', 'del']:
-        keybox.assertExist(args.title)
+        if not self.exists(title):
+            exitWithError("Error: '%s' not found, try to list all titles or change to another title" % title)
     elif args.action == "import":
         if not os.path.exists(args.file):
             exitWithError("Error: file '%s' not found." % args.file)
@@ -220,20 +236,26 @@ def main():
                 exitWithError("Error: file exists, please choose a different file to export")
             else:
                 fd = open(args.file, 'w')
+    elif args.action == "reset":
+        if not keybox.exists(KeyBox.MASTER_KEY_TITLE):
+            exitWithError("Error: master password is not set yet")
 
-    keybox.initOrVerifyMasterPassword()
-    if args.action in ['view', 'mod', 'del']:
-         sys.stdout.write( "---\n%s:\n%s---\n" % (args.title, keybox.view(args.title) ) )
-
+    if not keybox.exists(KeyBox.MASTER_KEY_TITLE):
+        keybox.initMasterPassword()
+    else:
+        keybox.verifyMasterPassword()
+    
     if args.action == 'add':
         plain = inputContent(args.title)
         keybox.set(args.title, plain)
     elif args.action == "view":
-         sys.exit(0)
+         sys.stdout.write( "---\n%s:\n%s---\n" % (args.title, keybox.view(args.title) ) )
     elif args.action == "mod":
+        sys.stdout.write( "---\n%s---\n" % keybox.view(args.title) )
         plain = inputContent(args.title)
         keybox.set(args.title, plain)
     elif args.action == "del":
+        sys.stdout.write( "---\n%s:\n%s---\n" % (args.title, keybox.view(args.title) ) )
         confirm = raw_input("Confirm to delete key '%s' [yes/no]? " % args.title)
         while confirm not in ['yes', 'no']:
             confirm = raw_input("Confirm to delete key '%s' [yes/no]? " % args.title)
@@ -258,6 +280,8 @@ def main():
                 fd.write("\n")
         if fd != sys.stdout:
             sys.stdout.write("Exported to file %s\n" % args.file)
+    elif args.action == "reset":
+        keybox.reset()
 
 if __name__ == '__main__':
     try:

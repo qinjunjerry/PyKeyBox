@@ -244,7 +244,7 @@ def main():
             exitWithError("Error: '%s' exists, try to view it or add with another title" % args.title)
     if args.action in ['view', 'mod', 'del']:
         if not keybox.exists(args.title):
-            exitWithError("Error: '%s' not found, try to list all titles or change to another title" % title)
+            exitWithError("Error: '%s' not found, try to list all titles or change to another title" % args.title)
     elif args.action == "import":
         if not os.path.exists(args.file):
             exitWithError("Error: file '%s' not found." % args.file)

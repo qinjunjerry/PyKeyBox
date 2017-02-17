@@ -21,10 +21,10 @@ lines of code, excluding empty lines and comments.
 ```
 keybox help          : show this help message and exit
 keybox list          : list all key titles
-keybox view   <title>: view the content for the given key title
 keybox add    <title>: add a new key title and content
-keybox mod    <title>: modify the content for the given key title
-keybox del    <title>: delete an existing key title and content
+keybox view   keyword: view the content for the key title matching the given keywords
+keybox mod    keyword: modify the content for the key title matching the given keywords
+keybox del    keyword: delete an existing key title matching the given keywords and the key content
 keybox import <file> : import all key titles and contents from a text file
 keybox export [file] : export all key titles and contents to stdout or a file
 keybox reset         : reset the master password

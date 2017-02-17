@@ -218,7 +218,7 @@ def main():
     subParser.add_argument("keyword", nargs="+", help="a keyword")
     subParser = subparsers.add_parser("mod", help="modify the content for the key title matching the given keywords")
     subParser.add_argument("keyword", nargs="+", help="a keyword")
-    subParser = subparsers.add_parser("del", help="delete an existing key title matching the given keywords and it content")
+    subParser = subparsers.add_parser("del", help="delete an existing key title matching the given keywords and the key content")
     subParser.add_argument("keyword", nargs="+", help="a keyword")
 
     subParser = subparsers.add_parser("import", help="import all key titles and contents from a text file")

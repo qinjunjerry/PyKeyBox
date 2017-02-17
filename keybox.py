@@ -35,6 +35,14 @@ class KeyBox(object):
                 titles.append( row[0] )
         return titles
 
+    def search(self, keywords):
+        keywordset = {keyword.lower() for keyword in keywords}
+        matches = []
+        for title in self.list():
+            if keywordset - set(title.lower().split()) == set():
+                matches.append(title)
+        return matches
+
     def exists(self, title):
         self.cursor.execute("SELECT content FROM %s WHERE title=?" % KeyBox.TABLE_NAME, (title,) )
         return self.cursor.fetchone() != None
@@ -195,27 +203,32 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-d', '--database', 
                     help='the sqlite database file to store keys. ' + 
-                    'Default: the previously used database file, or %s/keybox.sdb' 
-                    % os.environ["HOME"] )
+                    'Default: the previously used database file (see its location in %s/.keybox), or %s/keybox.sdb' 
+                    % (os.environ["HOME"], os.environ["HOME"]) )
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
-            metavar='help|list|view|add|mod|del|import|export')
+            metavar='help|list|view|add|mod|del|import|export|reset')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")
+    
     subParser = subparsers.add_parser("list", help="list all key titles (this is default)")
-    subParser = subparsers.add_parser("view", help="view the content for the given key title")
-    subParser.add_argument("title", help="a key title")
+
     subParser = subparsers.add_parser("add", help="add a new key title and content")
     subParser.add_argument("title", help="a key title")
-    subParser = subparsers.add_parser("mod", help="modify the content for the given key title")
-    subParser.add_argument("title", help="a key title")
-    subParser = subparsers.add_parser("del", help="delete an existing key title and content")
-    subParser.add_argument("title", help="a key title")
+
+    subParser = subparsers.add_parser("view", help="view the content for the key title matching the given keywords")
+    subParser.add_argument("keyword", nargs="+", help="a keyword")
+    subParser = subparsers.add_parser("mod", help="modify the content for the key title matching the given keywords")
+    subParser.add_argument("keyword", nargs="+", help="a keyword")
+    subParser = subparsers.add_parser("del", help="delete an existing key title matching the given keywords and it content")
+    subParser.add_argument("keyword", nargs="+", help="a keyword")
+
     subParser = subparsers.add_parser("import", help="import all key titles and contents from a text file")
     subParser.add_argument("file", help="a text file containing key titles and contents to import")
     subParser = subparsers.add_parser("export", help="export all key titles and contents to stdout or a file")
     subParser.add_argument("file", nargs='?', help="a text file to export the key titles and contents")
+    
     subParser = subparsers.add_parser("reset", help="reset the master password")
     
-    # 'list' if not subcommand is given
+    # 'list' if no sub-command is given
     if len(sys.argv) == 1: sys.argv.append('list')
     
     args = parser.parse_args()
@@ -243,8 +256,30 @@ def main():
         if keybox.exists(args.title):
             exitWithError("Error: '%s' exists, try to view it or add with another title" % args.title)
     if args.action in ['view', 'mod', 'del']:
-        if not keybox.exists(args.title):
-            exitWithError("Error: '%s' not found, try to list all titles or change to another title" % args.title)
+        matches = keybox.search(args.keyword)
+        if len(matches) == 0:
+            exitWithError("Error: no title matching the given keywords, try to list all titles or change to another title")
+        else:
+            sys.stdout.write ("Found the following titles:\n")
+            for index, title in enumerate(matches):
+                print "%d - %s" % (index, title)
+
+            index = 0
+            if len(matches) > 1:
+                index = -1
+                while index < 0 or index >= len(matches):
+                    index = raw_input("Select: [0] ").strip()
+                    if len(index) == 0:
+                        index = 0
+                        break
+                    else:
+                        try:
+                            index = int(index)
+                        except ValueError:
+                            pass
+                               
+            args.title = matches[index]
+            
     elif args.action == "import":
         if not os.path.exists(args.file):
             exitWithError("Error: file '%s' not found." % args.file)

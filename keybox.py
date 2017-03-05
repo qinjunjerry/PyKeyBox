@@ -192,7 +192,7 @@ def exitWithError(errMsg, errCode=-1):
 def getDefaultDBFile():
     keyboxFile = "%s/.keybox" % os.environ['HOME']
     if not os.path.exists(keyboxFile):
-        return "%s/keybox.sdb" % os.environ['HOME']
+        return "%s/%s.keybox" % (os.environ['HOME'], os.environ['USER'])
 
     with open(keyboxFile, 'r') as fd:
         for line in fd:
@@ -209,8 +209,8 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-d', '--database',
                     help='the sqlite database file to store keys. ' +
-                    'Default: the previously used database file (see its location in %s/.keybox), or %s/keybox.sdb'
-                    % (os.environ["HOME"], os.environ["HOME"]) )
+                    'Default: the previously used database file (see its location in %s/.keybox), or %s/%s.keybox'
+                    % (os.environ["HOME"], os.environ["HOME"], os.environ['USER']) )
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
             metavar='help|list|view|add|mod|del|import|export|reset')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")

@@ -18,7 +18,7 @@ class KeyBox(object):
 
     def __init__(self, aFile):
         self.conn = sqlite3.connect(aFile)
-        # Use 8-bit string instead of unicode string, in order to read/write 
+        # Use 8-bit string instead of unicode string, in order to read/write
         # international characters like Chinese
         self.conn.text_factory = str
         # The following line would use unicode string
@@ -36,12 +36,18 @@ class KeyBox(object):
         return titles
 
     def search(self, keywords):
-        keywordset = {keyword.lower() for keyword in keywords}
-        matches = []
+        keywordsLower = { keyword.lower() for keyword in keywords }
+        matchingTitles = []
         for title in self.list():
-            if keywordset - set(title.lower().split()) == set():
-                matches.append(title)
-        return matches
+            titleLower = title.lower()
+            match = True
+            for keyword in keywordsLower:
+                if titleLower.find(keyword) == -1:
+                    match = False
+                    break
+            if match:
+                matchingTitles.append(title)
+        return matchingTitles
 
     def exists(self, title):
         self.cursor.execute("SELECT content FROM %s WHERE title=?" % KeyBox.TABLE_NAME, (title,) )
@@ -54,15 +60,15 @@ class KeyBox(object):
             self.aesKey = hashlib.sha256(password).digest()
             # the hash of the AES key, stored in db for master password verification
             keyHash = hashlib.sha256(self.aesKey).hexdigest()
-            self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?)" % table, 
+            self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?)" % table,
                     (KeyBox.MASTER_KEY_TITLE, keyHash ) )
             self.conn.commit()
         else:
             exitWithError("Error: password not match, please retry")
-            
+
     def verifyMasterPassword(self):
         # get the stored key hash
-        self.cursor.execute("SELECT content FROM %s WHERE title=?" 
+        self.cursor.execute("SELECT content FROM %s WHERE title=?"
                 % KeyBox.TABLE_NAME, (KeyBox.MASTER_KEY_TITLE,) )
         storedKeyHash = self.cursor.fetchone()[0]
         # input master password
@@ -73,7 +79,7 @@ class KeyBox(object):
             exitWithError("Error: incorrect master password, please retry")
 
     def view(self, title):
-        self.cursor.execute("SELECT content FROM %s WHERE title=?" 
+        self.cursor.execute("SELECT content FROM %s WHERE title=?"
                 % KeyBox.TABLE_NAME, (title,) )
         encrypted = self.cursor.fetchone()[0]
         return decrypt(encrypted, self.aesKey)
@@ -201,14 +207,14 @@ def main():
 
     # parse command line arguments
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-d', '--database', 
-                    help='the sqlite database file to store keys. ' + 
-                    'Default: the previously used database file (see its location in %s/.keybox), or %s/keybox.sdb' 
+    parser.add_argument('-d', '--database',
+                    help='the sqlite database file to store keys. ' +
+                    'Default: the previously used database file (see its location in %s/.keybox), or %s/keybox.sdb'
                     % (os.environ["HOME"], os.environ["HOME"]) )
     subparsers = parser.add_subparsers(title="subcommands", dest="action",
             metavar='help|list|view|add|mod|del|import|export|reset')
     helpParser = subparsers.add_parser("help", help="show this help message and exit")
-    
+
     subParser = subparsers.add_parser("list", help="list all key titles (this is default)")
 
     subParser = subparsers.add_parser("add", help="add a new key title and content")
@@ -225,12 +231,12 @@ def main():
     subParser.add_argument("file", help="a text file containing key titles and contents to import")
     subParser = subparsers.add_parser("export", help="export all key titles and contents to stdout or a file")
     subParser.add_argument("file", nargs='?', help="a text file to export the key titles and contents")
-    
+
     subParser = subparsers.add_parser("reset", help="reset the master password")
-    
+
     # 'list' if no sub-command is given
     if len(sys.argv) == 1: sys.argv.append('list')
-    
+
     args = parser.parse_args()
 
     if args.action == 'help':
@@ -277,9 +283,9 @@ def main():
                             index = int(index)
                         except ValueError:
                             pass
-                               
+
             args.title = matches[index]
-            
+
     elif args.action == "import":
         if not os.path.exists(args.file):
             exitWithError("Error: file '%s' not found." % args.file)
@@ -298,7 +304,7 @@ def main():
         keybox.initMasterPassword()
     else:
         keybox.verifyMasterPassword()
-    
+
     if args.action == 'add':
         plain = inputContent(args.title)
         keybox.set(args.title, plain)

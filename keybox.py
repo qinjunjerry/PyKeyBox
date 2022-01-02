@@ -1,18 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """A mini key/password manager written in python using the AES encryption algorithm."""
 
+import argparse
+import getpass
+import hashlib
 import os
+import os.path
+import sqlite3
 import sys
 import time
-import os.path
-import random
-import sqlite3
-import hashlib
-import getpass
-import argparse
 
-import Crypto.Cipher.AES
+from Cryptodome.Cipher import AES
 
 
 class KeyBox(object):
@@ -63,14 +62,14 @@ class KeyBox(object):
     def init_master_password(self, table=TABLE_NAME):
         password = input_password("Create a new master password: ")
         if password == input_password("Confirm the master password: "):
-            self.aes_key = hashlib.sha256(password).digest()
+            self.aes_key = hashlib.sha256(password.encode()).digest()
             # the hash of the AES key, stored in db for master password verification
             key_hash = hashlib.sha256(self.aes_key).hexdigest()
             self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?,?)" % table,
                                 (KeyBox.MASTER_KEY_TITLE, time.time(), key_hash))
             self.conn.commit()
         else:
-            exit_with_error("Error: password not match, please retry")
+            exit_with_error("Error: password not match, try again")
 
     def verify_master_password(self):
         # get the stored key hash
@@ -79,10 +78,10 @@ class KeyBox(object):
         stored_key_hash = self.cursor.fetchone()[0]
         # input master password
         password = input_password("Master password: ")
-        self.aes_key = hashlib.sha256(password).digest()
+        self.aes_key = hashlib.sha256(password.encode()).digest()
         # compare key hash
         if hashlib.sha256(self.aes_key).hexdigest() != stored_key_hash:
-            exit_with_error("Error: incorrect master password, please retry")
+            exit_with_error("Error: incorrect master password, try again")
 
     def view(self, title):
         self.cursor.execute("SELECT time, content FROM %s WHERE title=?"
@@ -92,7 +91,8 @@ class KeyBox(object):
 
     def set(self, title, plain, mod_time=time.time(), table=TABLE_NAME):
         # for better print effect
-        if plain[-1] != "\n": plain += "\n"
+        if plain[-1] != "\n":
+            plain += "\n"
         encrypted = encrypt(plain, self.aes_key)
         self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?,?)" % table,
                             (title, mod_time, sqlite3.Binary(encrypted)))
@@ -124,7 +124,7 @@ def input_content(title):
     sys.stdout.write("Input content of '%s', enter an empty line to finish:\n" % title)
     lines = []
     while True:
-        line = raw_input()
+        line = input()
         if line:
             lines.append(line)
         else:
@@ -140,15 +140,17 @@ def input_password(text):
 
 
 def encrypt(plain, aes_key):
-    iv = ''.join(chr(random.randint(0, 0xFF)) for _ in range(Crypto.Cipher.AES.block_size))
-    cipher = Crypto.Cipher.AES.AESCipher(aes_key, Crypto.Cipher.AES.MODE_CFB, iv)
-    return iv + cipher.encrypt(plain)
+    cipher = AES.new(aes_key, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(plain.encode())
+    return cipher.nonce + tag + ciphertext
 
 
 def decrypt(encrypted, aes_key):
-    iv = encrypted[0:Crypto.Cipher.AES.block_size]
-    cipher = Crypto.Cipher.AES.AESCipher(aes_key, Crypto.Cipher.AES.MODE_CFB, iv)
-    return cipher.decrypt(encrypted[Crypto.Cipher.AES.block_size:])
+    nonce = encrypted[0:AES.block_size]
+    tag = encrypted[AES.block_size:AES.block_size*2]
+    ciphertext = encrypted[AES.block_size*2:]
+    cipher = AES.new(aes_key, AES.MODE_EAX, nonce)
+    return cipher.decrypt_and_verify(ciphertext, tag).decode("utf-8")
 
 
 def read_keys(a_file):
@@ -179,8 +181,9 @@ def read_keys(a_file):
                     # remove the empty lines at the end
                     while len(content_lines) > 0 and content_lines[-1] == "\n":
                         content_lines = content_lines[:-1]
-                    # add to keys for return
-                    if mod_time < 0: mod_time = time.time()
+                    # add to 'keys' to return
+                    if mod_time < 0:
+                        mod_time = time.time()
                     keys.append((title, mod_time, '\n'.join([aLine for aLine in content_lines])))
                 # set next key title, and clear content
                 title = line[5:]
@@ -196,8 +199,9 @@ def read_keys(a_file):
         # remove the empty lines at the end
         while len(content_lines) > 0 and content_lines[-1] == "\n":
             content_lines = content_lines[:-1]
-        # add to keys for return
-        if mod_time < 0: mod_time = time.time()
+        # add to "keys" to return
+        if mod_time < 0:
+            mod_time = time.time()
         keys.append((title, mod_time, '\n'.join([aLine for aLine in content_lines])))
 
     return keys
@@ -277,7 +281,7 @@ def main():
             sys.stdout.write("No item found\n")
         else:
             for title, mod_time in title_time_array:
-                print time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time)) + " - " + title
+                print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time)) + " - " + title)
         sys.exit(0)
 
     # check errors before init or verify master password
@@ -293,13 +297,13 @@ def main():
             sys.stdout.write("Found the following titles:\n")
             for index, (title, mod_time) in enumerate(matches):
                 mod_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time))
-                print "[%d] %s - %s" % (index, mod_str, title)
+                print("[%d] %s - %s" % (index, mod_str, title))
 
             index = 0
             if len(matches) > 1:
                 index = -1
                 while index < 0 or index >= len(matches):
-                    index = raw_input("Select: [0] ").strip()
+                    index = input("Select: [0] ").strip()
                     if len(index) == 0:
                         index = 0
                         break
@@ -315,12 +319,8 @@ def main():
         if not os.path.exists(args.file):
             exit_with_error("Error: file '%s' not found." % args.file)
     elif args.action == "export":
-        fd = sys.stdout
-        if args.file is not None:
-            if os.path.exists(args.file):
-                exit_with_error("Error: file exists, please choose a different file to export")
-            else:
-                fd = open(args.file, 'w')
+        if args.file is not None and os.path.exists(args.file):
+            exit_with_error("Error: file exists, please choose a different file to export")
     elif args.action == "reset":
         if not keybox.exists(KeyBox.MASTER_KEY_TITLE):
             exit_with_error("Error: master password is not set yet")
@@ -345,9 +345,9 @@ def main():
         mod_time, plain = keybox.view(args.title)
         mod_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time))
         sys.stdout.write("---\nKEY: %s:\nMOD: %s\n%s---\n" % (args.title, mod_str, plain))
-        confirm = raw_input("Confirm to delete key '%s' [yes/no]? " % args.title)
+        confirm = input("Confirm to delete key '%s' [yes/no]? " % args.title)
         while confirm not in ['yes', 'no']:
-            confirm = raw_input("Confirm to delete key '%s' [yes/no]? " % args.title)
+            confirm = input("Confirm to delete key '%s' [yes/no]? " % args.title)
         if confirm == 'yes':
             keybox.delete(args.title)
             sys.stdout.write("Deleted.\n")
@@ -359,7 +359,9 @@ def main():
                 keybox.set(title, content, mod_time=mod_time)
                 sys.stdout.write("imported %s\n" % title)
     elif args.action == "export":
-        if fd == sys.stdout: fd.write("---\n")
+        fd = sys.stdout if args.file is None else open(args.file, 'w')
+        if fd == sys.stdout:
+            fd.write("---\n")
         for title, mod_time in keybox.list():
             fd.write("KEY: %s\n" % title)
             fd.write("MOD: %s\n" % mod_time)

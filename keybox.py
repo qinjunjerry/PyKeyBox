@@ -239,7 +239,7 @@ def main():
                               'Default: the previously used database file (see its location in %s/.keybox), ' +
                               'or %s/%s.keybox') % (os.environ["HOME"], os.environ["HOME"], os.environ['USER']))
     subparsers = parser.add_subparsers(title="sub_commands", dest="action",
-                                       metavar='help|list|view|add|edit|del|import|export|reset')
+                                       metavar='help|list|view|add|edit|del|rm|import|export|reset')
     subparsers.add_parser("help", help="Show this help message and exit")
 
     subparsers.add_parser("list", help="List all key titles (this is default)")
@@ -254,6 +254,9 @@ def main():
     sub_parser = subparsers.add_parser("del",
                                        help="Delete an existing key title matching the given keywords and the key " +
                                             "content")
+    sub_parser.add_argument("keyword", nargs="+", help="A keyword")
+    sub_parser = subparsers.add_parser("rm",
+                                       help="Alias for 'del'")
     sub_parser.add_argument("keyword", nargs="+", help="A keyword")
 
     sub_parser = subparsers.add_parser("import", help="Import all key titles and contents from a text file")
@@ -291,7 +294,7 @@ def main():
     if args.action == 'add':
         if keybox.exists(args.title):
             exit_with_error("Error: '%s' exists, try to view it or add with another title" % args.title)
-    if args.action in ['view', 'edit', 'del']:
+    if args.action in ['view', 'edit', 'del', 'rm']:
         matches = keybox.search(args.keyword)
         if len(matches) == 0:
             exit_with_error(
@@ -344,7 +347,7 @@ def main():
         sys.stdout.write("---\n%s---\n" % keybox.view(args.title)[1])
         plain = input_content(args.title)
         keybox.set(args.title, plain)
-    elif args.action == "del":
+    elif args.action == "del" or args.action == "rm":
         mod_time, plain = keybox.view(args.title)
         mod_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time))
         sys.stdout.write("---\nKEY: %s:\nMOD: %s\n%s---\n" % (args.title, mod_str, plain))

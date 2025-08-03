@@ -25,6 +25,7 @@ keybox add    <title>   : Add a new key title and content
 keybox view   <keyword> : View the content for the key title matching the given keywords
 keybox edit   <keyword> : Edit the content for the key title matching the given keywords
 keybox del    <keyword> : Delete an existing key title matching the given keywords and the key content
+keybox rm    <keyword>  : Alias for 'del'
 keybox import <file>    : Import all key titles and contents from a text file
 keybox export [file]    : Export all key titles and contents to stdout or a file
 keybox reset            : Reset the master password

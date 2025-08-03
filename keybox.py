@@ -121,14 +121,17 @@ class KeyBox(object):
 
 
 def input_content(title):
-    sys.stdout.write("Input content of '%s', enter an empty line to finish:\n" % title)
+    sys.stdout.write("Input content of '%s', type Ctrl+d to finish:\n" % title)
     lines = []
-    while True:
-        line = input()
-        if line:
+    # input() does not detect Ctrl+D directly, it raises an EOFError
+    try:
+        while True:
+            line = input()
             lines.append(line)
-        else:
-            break
+    except EOFError:
+        if len(lines) == 0:
+            exit_with_error("Error: no content given")
+
     return '\n'.join(lines)
 
 

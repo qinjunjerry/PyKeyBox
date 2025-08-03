@@ -235,33 +235,33 @@ def main():
     # parse command line arguments
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-d', '--database',
-                        help=('the sqlite database file to store keys. ' +
+                        help=('The sqlite database file to store keys. ' +
                               'Default: the previously used database file (see its location in %s/.keybox), ' +
                               'or %s/%s.keybox') % (os.environ["HOME"], os.environ["HOME"], os.environ['USER']))
     subparsers = parser.add_subparsers(title="sub_commands", dest="action",
-                                       metavar='help|list|view|add|mod|del|import|export|reset')
-    subparsers.add_parser("help", help="show this help message and exit")
+                                       metavar='help|list|view|add|edit|del|import|export|reset')
+    subparsers.add_parser("help", help="Show this help message and exit")
 
-    subparsers.add_parser("list", help="list all key titles (this is default)")
+    subparsers.add_parser("list", help="List all key titles (this is default)")
 
-    sub_parser = subparsers.add_parser("add", help="add a new key title and content")
-    sub_parser.add_argument("title", help="a key title")
+    sub_parser = subparsers.add_parser("add", help="Add a new key title and content")
+    sub_parser.add_argument("title", help="A key title")
 
-    sub_parser = subparsers.add_parser("view", help="view the content for the key title matching the given keywords")
-    sub_parser.add_argument("keyword", nargs="+", help="a keyword")
-    sub_parser = subparsers.add_parser("mod", help="modify the content for the key title matching the given keywords")
-    sub_parser.add_argument("keyword", nargs="+", help="a keyword")
+    sub_parser = subparsers.add_parser("view", help="View the content for the key title matching the given keywords")
+    sub_parser.add_argument("keyword", nargs="+", help="A keyword")
+    sub_parser = subparsers.add_parser("edit", help="Edit the content for the key title matching the given keywords")
+    sub_parser.add_argument("keyword", nargs="+", help="A keyword")
     sub_parser = subparsers.add_parser("del",
-                                       help="delete an existing key title matching the given keywords and the key " +
+                                       help="Delete an existing key title matching the given keywords and the key " +
                                             "content")
-    sub_parser.add_argument("keyword", nargs="+", help="a keyword")
+    sub_parser.add_argument("keyword", nargs="+", help="A keyword")
 
-    sub_parser = subparsers.add_parser("import", help="import all key titles and contents from a text file")
-    sub_parser.add_argument("file", help="a text file containing key titles and contents to import")
-    sub_parser = subparsers.add_parser("export", help="export all key titles and contents to stdout or a file")
-    sub_parser.add_argument("file", nargs='?', help="a text file to export the key titles and contents")
+    sub_parser = subparsers.add_parser("import", help="Import all key titles and contents from a text file")
+    sub_parser.add_argument("file", help="A text file containing key titles and contents to import")
+    sub_parser = subparsers.add_parser("export", help="Export all key titles and contents to stdout or a file")
+    sub_parser.add_argument("file", nargs='?', help="A text file to export the key titles and contents")
 
-    subparsers.add_parser("reset", help="reset the master password")
+    subparsers.add_parser("reset", help="Reset the master password")
 
     # 'list' if no sub-command is given
     if len(sys.argv) == 1:
@@ -291,7 +291,7 @@ def main():
     if args.action == 'add':
         if keybox.exists(args.title):
             exit_with_error("Error: '%s' exists, try to view it or add with another title" % args.title)
-    if args.action in ['view', 'mod', 'del']:
+    if args.action in ['view', 'edit', 'del']:
         matches = keybox.search(args.keyword)
         if len(matches) == 0:
             exit_with_error(
@@ -340,7 +340,7 @@ def main():
         mod_time, plain = keybox.view(args.title)
         mod_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mod_time))
         sys.stdout.write("---\nKEY: %s\nMOD: %s\n%s---\n" % (args.title, mod_str, plain))
-    elif args.action == "mod":
+    elif args.action == "edit":
         sys.stdout.write("---\n%s---\n" % keybox.view(args.title)[1])
         plain = input_content(args.title)
         keybox.set(args.title, plain)

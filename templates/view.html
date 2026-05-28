@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ title }} - PyKeyBox{% endblock %}
+{% block title %}{{ title }} - Keybox{% endblock %}
 {% block body %}
 <div class="card">
   <div style="display:flex; justify-content:space-between; align-items:baseline;">
@@ -10,11 +10,25 @@
   <div class="actions">
     <a class="btn btn-secondary" href="{{ url_for('index') }}">Back</a>
     <a class="btn btn-primary" href="{{ url_for('edit', title=title) }}">Edit</a>
-    <form method="post" action="{{ url_for('delete') }}"
-          onsubmit="return confirm('Delete key \'{{ title }}\'?');" style="margin:0;">
+    <button class="btn-danger" type="button" onclick="openDelete()">Delete</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="del-modal" onclick="if(event.target===this)closeDelete()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="del-title">
+    <h3 id="del-title">Delete key</h3>
+    <p>Are you sure you want to delete &ldquo;{{ title }}&rdquo;? This cannot be undone.</p>
+    <form method="post" action="{{ url_for('delete') }}" class="actions">
       <input type="hidden" name="title" value="{{ title }}">
-      <button class="btn-danger" type="submit">Delete</button>
+      <button type="button" class="btn-secondary" onclick="closeDelete()">Cancel</button>
+      <button type="submit" class="btn-danger">Delete</button>
     </form>
   </div>
 </div>
+
+<script>
+  function openDelete(){ document.getElementById('del-modal').classList.add('open'); }
+  function closeDelete(){ document.getElementById('del-modal').classList.remove('open'); }
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDelete(); });
+</script>
 {% endblock %}

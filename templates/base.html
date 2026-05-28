@@ -3,43 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}PyKeyBox{% endblock %}</title>
+  <title>{% block title %}Keybox{% endblock %}</title>
   <style>
-    :root { --bg:#f5f6f8; --card:#fff; --border:#dde1e6; --accent:#2d6cdf; --danger:#d9534f; --muted:#6b7280; }
+    :root { --bg:#f5f6f8; --card:#fff; --border:#dde1e6; --accent:#2d6cdf; --danger:#d9534f; --muted:#6b7280; --text:#1f2329; --btn-secondary-bg:#eef0f3; --flash-bg:#fff4e5; --flash-border:#ffd591; --flash-text:#8a5a00; --input-bg:#fff; }
+    [data-theme="dark"] { --bg:#0f1117; --card:#1a1d27; --border:#2a2f3a; --accent:#5b8cff; --danger:#e06c69; --muted:#9aa3b2; --text:#e6e9ef; --btn-secondary-bg:#2a2f3a; --flash-bg:#3a2e12; --flash-border:#6b5318; --flash-text:#f0c674; --input-bg:#11141c; }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:#1f2329; }
-    header { background:var(--card); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; justify-content:space-between; height:56px; }
-    header a.brand { font-weight:700; font-size:18px; color:#1f2329; text-decoration:none; }
-    header nav a { color:var(--accent); text-decoration:none; margin-left:16px; font-size:14px; }
+    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); transition:background .2s ease, color .2s ease; }
+    header { position:relative; background:var(--card); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; justify-content:space-between; height:56px; }
+    header a.brand { font-weight:700; font-size:18px; color:var(--text); text-decoration:none; }
+    header nav a { color:var(--accent); text-decoration:none; margin-left:16px; font-size:14px; display:inline-flex; align-items:center; gap:5px; }
+    header nav a svg { width:16px; height:16px; }
+    .theme-toggle { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:none; border:none; padding:0; color:var(--accent); font-size:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+    .theme-toggle svg { width:16px; height:16px; }
+    .theme-toggle span { display:inline-flex; align-items:center; gap:6px; }
+    .theme-toggle .icon-dark, [data-theme="dark"] .theme-toggle .icon-light { display:none; }
+    [data-theme="dark"] .theme-toggle .icon-dark { display:inline-flex; }
     main { max-width:760px; margin:24px auto; padding:0 20px; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
-    .flash { background:#fff4e5; border:1px solid #ffd591; color:#8a5a00; padding:10px 14px; border-radius:8px; margin-bottom:16px; }
-    input[type=text], input[type=password], textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; }
+    .flash { background:var(--flash-bg); border:1px solid var(--flash-border); color:var(--flash-text); padding:10px 14px; border-radius:8px; margin-bottom:16px; }
+    input[type=text], input[type=password], textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; background:var(--input-bg); color:var(--text); }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    input:disabled { opacity:.6; }
     textarea { min-height:200px; resize:vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     label { display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
     button, .btn { display:inline-block; border:none; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; text-decoration:none; }
     .btn-primary { background:var(--accent); color:#fff; }
-    .btn-secondary { background:#eef0f3; color:#1f2329; }
+    .btn-secondary { background:var(--btn-secondary-bg); color:var(--text); }
     .btn-danger { background:var(--danger); color:#fff; }
     .actions { display:flex; gap:8px; align-items:center; margin-top:16px; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:20px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.35); }
+    .modal h3 { margin:0 0 8px; font-size:16px; }
+    .modal p { margin:0 0 20px; color:var(--muted); font-size:14px; word-break:break-word; }
+    .modal .actions { justify-content:flex-end; margin-top:0; }
     ul.keys { list-style:none; margin:0; padding:0; }
     ul.keys li { display:flex; justify-content:space-between; align-items:center; padding:12px 4px; border-bottom:1px solid var(--border); }
     ul.keys li:last-child { border-bottom:none; }
     ul.keys a.title { color:var(--accent); text-decoration:none; font-weight:600; font-size:15px; }
     .time { color:var(--muted); font-size:12px; }
-    pre.content { background:#0f172a; color:#e2e8f0; padding:16px; border-radius:8px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+    pre.content { background:var(--input-bg); color:var(--text); border:1px solid var(--border); opacity:.6; padding:16px; border-radius:8px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
     .search { display:flex; gap:8px; margin-bottom:16px; }
     .search input { flex:1; }
     .empty { color:var(--muted); text-align:center; padding:24px; }
   </style>
+  <script>
+    function applyTheme(t){document.documentElement.setAttribute('data-theme', t);}
+    function toggleTheme(){
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      applyTheme(next);
+    }
+    (function(){
+      var saved;
+      try { saved = localStorage.getItem('theme'); } catch (e) {}
+      if (!saved) {
+        saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      }
+      applyTheme(saved);
+    })();
+  </script>
 </head>
 <body>
   {% if session.get('sid') %}
   <header>
-    <a class="brand" href="{{ url_for('index') }}">🔐 PyKeyBox</a>
+    <a class="brand" href="{{ url_for('index') }}">🔐 Keybox</a>
+    <a class="theme-toggle" href="javascript:void(0)" role="button" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="icon-light">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </span>
+      <span class="icon-dark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </span>
+    </a>
     <nav>
-      <a href="{{ url_for('add') }}">+ Add</a>
-      <a href="{{ url_for('logout') }}">Logout</a>
+      <a href="{{ url_for('add') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Add
+      </a>
+      <a href="{{ url_for('logout') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Logout
+      </a>
     </nav>
   </header>
   {% endif %}

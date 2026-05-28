@@ -63,3 +63,48 @@ Configuration via environment variables:
 
 The bundled server is Flask's development server; put a production WSGI
 server (e.g. gunicorn) in front of it for real deployments.
+
+
+## MCP server
+An MCP (Model Context Protocol) server is included in `mcp_server.py`, exposing
+the same `KeyBox` core to MCP clients such as Claude Desktop and Claude Code. It
+speaks stdio only and reuses the same SQLite database as the CLI and web UI.
+
+```
+pip install -r requirements.txt
+```
+
+Register it with your MCP client. For Claude Code:
+
+```
+claude mcp add pykeybox -- /path/to/PyKeyBox/.venv/bin/python /path/to/PyKeyBox/mcp_server.py
+```
+
+Or in a client config file (e.g. Claude Desktop's `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "pykeybox": {
+      "command": "/path/to/PyKeyBox/.venv/bin/python",
+      "args": ["/path/to/PyKeyBox/mcp_server.py"]
+    }
+  }
+}
+```
+
+Tools: `unlock`, `lock`, `list_keys`, `search_keys`, `view_key`, `add_key`,
+`edit_key`, `delete_key`. Call `unlock` with the master password once per
+session before the others; the derived AES key is held only in the server
+process's memory and is never written to disk.
+
+Configuration via environment variables:
+
+- `KEYBOX_DB`     : path to the keybox database file (default: same as the CLI)
+- `KEYBOX_MASTER` : master password to auto-unlock at startup (optional; prefer
+                    the `unlock` tool, since this places the password in the
+                    client config)
+
+Security: run this over stdio on localhost only -- never expose it over the
+network. Any model connected to the server can read every secret in plaintext
+once unlocked.

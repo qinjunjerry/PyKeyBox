@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Keys - PyKeyBox{% endblock %}
+{% block body %}
+<form class="search" method="get" action="{{ url_for('index') }}">
+  <input type="text" name="q" placeholder="Search titles..." value="{{ q }}">
+  <button class="btn-secondary" type="submit">Search</button>
+</form>
+<div class="card">
+  {% if items %}
+  <ul class="keys">
+    {% for title, mod_time in items %}
+    <li>
+      <a class="title" href="{{ url_for('view', title=title) }}">{{ title }}</a>
+      <span class="time">{{ mod_time | datetime }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty">
+    {% if q %}No keys match "{{ q }}".{% else %}No keys yet. <a href="{{ url_for('add') }}">Add one</a>.{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

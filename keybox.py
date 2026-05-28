@@ -59,28 +59,39 @@ class KeyBox(object):
         self.cursor.execute("SELECT time FROM %s WHERE title=?" % KeyBox.TABLE_NAME, (title,))
         return self.cursor.fetchone() is not None
 
-    def init_master_password(self, table=TABLE_NAME):
-        password = input_password("Create a new master password: ")
-        if password == input_password("Confirm the master password: "):
-            self.aes_key = hashlib.sha256(password.encode()).digest()
-            # the hash of the AES key, stored in db for master password verification
-            key_hash = hashlib.sha256(self.aes_key).hexdigest()
-            self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?,?)" % table,
-                                (KeyBox.MASTER_KEY_TITLE, time.time(), key_hash))
-            self.conn.commit()
-        else:
-            exit_with_error("Error: password not match, try again")
+    def is_initialized(self):
+        return self.exists(KeyBox.MASTER_KEY_TITLE)
 
-    def verify_master_password(self):
+    def set_master_password(self, password, table=TABLE_NAME):
+        self.aes_key = hashlib.sha256(password.encode()).digest()
+        # the hash of the AES key, stored in db for master password verification
+        key_hash = hashlib.sha256(self.aes_key).hexdigest()
+        self.cursor.execute("INSERT OR REPLACE INTO %s VALUES (?,?,?)" % table,
+                            (KeyBox.MASTER_KEY_TITLE, time.time(), key_hash))
+        self.conn.commit()
+
+    def check_master_password(self, password):
         # get the stored key hash
         self.cursor.execute("SELECT content FROM %s WHERE title=?"
                             % KeyBox.TABLE_NAME, (KeyBox.MASTER_KEY_TITLE,))
         stored_key_hash = self.cursor.fetchone()[0]
-        # input master password
-        password = input_password("Master password: ")
-        self.aes_key = hashlib.sha256(password.encode()).digest()
+        aes_key = hashlib.sha256(password.encode()).digest()
         # compare key hash
-        if hashlib.sha256(self.aes_key).hexdigest() != stored_key_hash:
+        if hashlib.sha256(aes_key).hexdigest() == stored_key_hash:
+            self.aes_key = aes_key
+            return True
+        return False
+
+    def init_master_password(self, table=TABLE_NAME):
+        password = input_password("Create a new master password: ")
+        if password == input_password("Confirm the master password: "):
+            self.set_master_password(password, table=table)
+        else:
+            exit_with_error("Error: password not match, try again")
+
+    def verify_master_password(self):
+        password = input_password("Master password: ")
+        if not self.check_master_password(password):
             exit_with_error("Error: incorrect master password, try again")
 
     def view(self, title):

@@ -39,3 +39,27 @@ anywhere you want.
 
 ## Yet secure enough
 It is based on the well known AES encryption algorithm.
+
+
+## Web UI
+A minimal Flask web UI is included in `webapp.py`. It reuses the same
+`KeyBox` core and SQLite database as the CLI.
+
+```
+pip install -r requirements.txt
+python webapp.py
+```
+
+Then open http://127.0.0.1:5000 in your browser. On first run you set the
+master password; afterwards you unlock with it. The master key is held only
+in server-side session memory (never in the browser cookie).
+
+Configuration via environment variables:
+
+- `KEYBOX_DB`    : path to the keybox database file (default: same as the CLI)
+- `KEYBOX_HOST`  : bind host (default: 127.0.0.1)
+- `KEYBOX_PORT`  : bind port (default: 5000)
+- `KEYBOX_SECRET`: Flask session secret (default: random per start)
+
+The bundled server is Flask's development server; put a production WSGI
+server (e.g. gunicorn) in front of it for real deployments.

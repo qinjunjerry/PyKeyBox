@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ "Add key" if mode == "add" else "Edit " + title }} - PyKeyBox{% endblock %}
+{% block body %}
+<div class="card">
+  <h2 style="margin-top:0">{{ "Add key" if mode == "add" else "Edit key" }}</h2>
+  <form method="post" action="{{ url_for('add') if mode == 'add' else url_for('edit', title=title) }}">
+    <label for="title">Title</label>
+    {% if mode == "add" %}
+      <input type="text" id="title" name="title" value="{{ title }}" autofocus required>
+    {% else %}
+      <input type="text" id="title" value="{{ title }}" disabled>
+    {% endif %}
+    <label for="content">Content</label>
+    <textarea id="content" name="content" {{ "autofocus" if mode == "edit" else "" }}>{{ content }}</textarea>
+    <div class="actions">
+      <a class="btn btn-secondary" href="{{ url_for('index') if mode == 'add' else url_for('view', title=title) }}">Cancel</a>
+      <button class="btn-primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

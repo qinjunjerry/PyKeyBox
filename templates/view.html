@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - PyKeyBox{% endblock %}
+{% block body %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:baseline;">
+    <h2 style="margin:0; word-break:break-word;">{{ title }}</h2>
+    <span class="time">{{ mod_time | datetime }}</span>
+  </div>
+  <pre class="content">{{ content }}</pre>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('index') }}">Back</a>
+    <a class="btn btn-primary" href="{{ url_for('edit', title=title) }}">Edit</a>
+    <form method="post" action="{{ url_for('delete') }}"
+          onsubmit="return confirm('Delete key \'{{ title }}\'?');" style="margin:0;">
+      <input type="hidden" name="title" value="{{ title }}">
+      <button class="btn-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

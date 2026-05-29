@@ -1,0 +1,22 @@
+# Caddy reverse proxy for Keybox, with HTTPS via Caddy's internal CA.
+#
+# Replace "keybox.home" with the hostname (or IP) you'll use to reach the
+# server on your LAN. You can list several addresses separated by commas,
+# e.g.:  keybox.home, 192.168.1.50
+#
+# `tls internal` makes Caddy mint a certificate from its own local CA — no
+# public domain or internet required. Browsers will warn until you trust
+# Caddy's root CA on each client device (see deploy/README.md).
+
+keybox.home {
+	tls internal
+	reverse_proxy 127.0.0.1:8000
+	encode gzip
+
+	# Optional hardening header (the app already sets HttpOnly/SameSite cookies).
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+}

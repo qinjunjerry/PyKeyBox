@@ -13,6 +13,16 @@ from keybox import KeyBox, get_default_db_file
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("KEYBOX_SECRET", secrets.token_hex(32))
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+# When running behind a TLS-terminating reverse proxy (e.g. Caddy), set
+# KEYBOX_BEHIND_PROXY=1 so the app trusts X-Forwarded-* headers and marks the
+# session cookie Secure. Left off for plain-HTTP local development.
+if os.environ.get("KEYBOX_BEHIND_PROXY") == "1":
+    from werkzeug.middleware.proxy_fix import ProxyFix
+
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    app.config["SESSION_COOKIE_SECURE"] = True
 
 DB_FILE = os.environ.get("KEYBOX_DB") or get_default_db_file()
 

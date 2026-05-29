@@ -1,0 +1,37 @@
+[Unit]
+Description=Keybox web UI (PyKeyBox)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=keybox
+Group=keybox
+WorkingDirectory=/opt/pykeybox
+
+# --- Configuration (edit these) ---
+# A FIXED secret so reboots/restarts don't log everyone out.
+# Generate one with:  python3 -c "import secrets; print(secrets.token_hex(32))"
+Environment=KEYBOX_SECRET=REPLACE_WITH_LONG_RANDOM_HEX
+# Where the encrypted SQLite database lives (set explicitly; do not rely on $HOME).
+Environment=KEYBOX_DB=/var/lib/keybox/keybox.db
+# Caddy terminates TLS and proxies to us: trust X-Forwarded-* and set Secure cookies.
+Environment=KEYBOX_BEHIND_PROXY=1
+
+# IMPORTANT: --workers 1 because the unlocked key is held in process memory.
+# Use threads (not workers) for concurrency. Bind to localhost only — Caddy
+# (listening on 443) is what's exposed to the LAN, not gunicorn.
+ExecStart=/opt/pykeybox/.venv/bin/gunicorn --workers 1 --threads 4 --bind 127.0.0.1:8000 webapp:app
+
+Restart=on-failure
+RestartSec=3
+
+# --- Hardening ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/keybox
+
+[Install]
+WantedBy=multi-user.target
